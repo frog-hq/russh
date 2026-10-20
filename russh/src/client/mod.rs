@@ -1846,8 +1846,14 @@ impl Session {
                 .is_some_and(|enc| matches!(enc.state, EncryptedState::Authenticated))
     }
 
+    /// When the event loop should wake up to start an automatic rekey.
+    ///
+    /// Always `None` under WebAssembly: `tokio::time` has no timer driver
+    /// there, and `std::time::Instant::now()` panics on
+    /// `wasm32-unknown-unknown`. The time and write limits are still enforced
+    /// when the next packet is flushed, as they were before the timer existed.
     fn rekey_time_remaining(&self) -> Option<Duration> {
-        if !self.automatic_rekey_allowed() {
+        if cfg!(target_arch = "wasm32") || !self.automatic_rekey_allowed() {
             return None;
         }
         self.common
